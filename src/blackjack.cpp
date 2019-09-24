@@ -1,7 +1,11 @@
 #include "../blackjack.h"
 
-/* Deck Class Definitions */
+/**** Deck Class Definitions ****/
 
+/****************************************************************************************
+void Deck::createDeck()
+	Creates the deck (adds 52 cards)
+****************************************************************************************/
 void Deck::createDeck()
 {
 	cards.reserve(MAX_CARDS);
@@ -10,15 +14,20 @@ void Deck::createDeck()
     {
         for (int  j = 0 ; j < Points.size() ; j++)
         {
-            cards.push_back(Card(Suit[i],Points[j],true));
+            cards.push_back(Card(Suit[i], Points[j], true));
         }
     }
 }
 
+/****************************************************************************************
+void Deck::resetDeck()
+	Resets the deck (removes all cards from the deck)
+****************************************************************************************/
 void Deck::resetDeck()
 {
 	cards.clear();
 }
+
 /****************************************************************************************
 void Deck::shuffle()
 	shuffles the whole Deck (Cards will be random after the shuffle)
@@ -37,7 +46,7 @@ void Deck::shuffle()
 
 /****************************************************************************************
 bool Deck::isEmpty()
-	returns true if Deck is empty, else false
+	returns true if the Deck is empty, else false
 ****************************************************************************************/
 bool Deck::isEmpty()
 {
@@ -46,27 +55,26 @@ bool Deck::isEmpty()
 
 /****************************************************************************************
 Card Deck::nextCard()
-	returns next card in the Deck, NULL if the Deck is empty
+	adds next card to the hand if available, nothing if empty
 ****************************************************************************************/
-void Deck::drawNextCard(Hand& hand)
+bool Deck::drawNextCard(Hand& hand)
 {
 	if (!cards.empty())
 	{
 		hand.addCard(cards.front());
 		cards.erase(cards.begin());
+		return true;
 	}
-	else
-	{
-		cout << "Deck is empty" << endl;
-	}
+
+	cout << "Deck is empty" << endl;
+	return false;
 }
 
-//  Card class Definitions 
+/****  Card class Definitions  ****/
 
 
 int Card::getValue()
 {
-	//cout << "isFaceUp : " << isFaceUp << endl;
 	if(isFaceUp) 
 	{ 
 		return value; 
@@ -74,9 +82,14 @@ int Card::getValue()
 
 	return 0;
 }
+
 string Card::getSuite()
 {
-	return face;
+	if (isFaceUp)
+	{
+		return face;
+	}
+	return "";
 }
 
 void Card::flip()
@@ -95,7 +108,7 @@ uint32_t Hand::getPoints()
 {
 	int total = 0;
 						  /* Face down */
-	if (cards.empty() || cards[0].getValue() == 0)
+	if (cards.empty() || (cards.size() == 2 && cards[1].getValue() == 0))
 	{
 		return 0;
 	}
@@ -121,12 +134,17 @@ void Hand::clearHand()
 	return;
 }
 
-void Hand::flipFirstCard()
+void Hand::flipSecondCard()
 {
-	if (!cards.empty())
+	if (cards.size() == 2)
 	{
-		cards[0].flip();
+		cards[1].flip();
 	}
+}
+
+void Hand::printLastCard()
+{
+	cout << cards.back().getSuite() << cards.back().getValue() << endl;
 }
 
 int Player::getTotalPoints()
@@ -146,26 +164,48 @@ void BlackJack::printDeck()
 {
 	deck.printDeck();
 }
+
+void Player::showHand()
+{
+	cout << "\033[1m" << name << "\033[0m" << "\x1b[31m : hands => " ;
+	if (!hand.cards.size())
+	{
+		cout << "(empty)" << ",";
+	}
+	for (int i = 0 ; i < hand.cards.size() ; i++)
+	{
+		cout << hand.cards[i].getSuite() << hand.cards[i].getValue() << ",";
+	}
+	cout << " Total => " << getTotalPoints() << "\x1b[0m" << endl;
+}
+
+bool Player::hasBlackJack()
+{
+	return getTotalPoints() == 21;
+}
+
 void BlackJack::play()
 {
 	string playerChoice;
 	bool playerStand = false;
 	bool playerQuits = false;
 	string name;
-
 	deck.createDeck();
 	deck.shuffle();
 		
 	while (!playerQuits)
 	{
-		cout << "Welcome to BlackJack" << endl;
-		
-		cout << "Enter players name" << endl;
+		cout << "\033[1mWelcome to BlackJack!\033[0m" << endl;
+		cout << "Enter players name : ";
 		cin >> name;
 
 		Player p(name);
 		Player d("Dealer");
-			
+		bool gameOver = false;
+
+		cout << "Welcome \033[1m" << p.name << "\033[0m" << ",";
+		cout << " Let's start the Game" << endl << endl;
+
 		if (noOfRounds == maxNumberOfRoundsBeforeShuffle)
 		{
 			deck.resetDeck();
@@ -173,110 +213,121 @@ void BlackJack::play()
 			deck.shuffle();		// Randomize
 		}
 
-		// Present 2 cards to player and 2 to dealer with one face down	
-		deck.drawNextCard(p.hand);
-		deck.drawNextCard(d.hand);
-		d.hand.flipFirstCard();
-		deck.drawNextCard(p.hand);
-		deck.drawNextCard(d.hand);
+		// Present 2 cards to player and 2 to dealer with one face down
 
-		cout << p.name << endl;
-		cout << "Player Hands -> " ;
-		for (int i = 0 ; i < p.hand.cards.size() ; i++)
-		{
-			cout << p.hand.cards[i].getSuite() <<  p.hand.cards[i].getValue() << ",";
-		}
-		cout << " Total -> " << p.getTotalPoints();
+		deck.drawNextCard(p.hand);
+		cout << "Drawing First Card for You => ";
+		p.hand.printLastCard();
+
+		deck.drawNextCard(d.hand);
+		cout << "Drawing First Card for Dealer => ";
+		d.hand.printLastCard();
+
 		cout << endl;
-		cout << "Dealer Hands -> ";
-		for (int i = 0 ; i < d.hand.cards.size() ; i++)
-		{
-			cout << d.hand.cards[i].getSuite() <<  d.hand.cards[i].getValue() << ",";
-		}
-		cout << " Total -> " << d.getTotalPoints();
+		p.showHand();
+		d.showHand();
 		cout << endl;
 
-		// cout << "Deck after Initial deal" << endl;
-		// printDeck();
+		deck.drawNextCard(p.hand);
+		cout << "Drawing Second Card for You => ";
+		p.hand.printLastCard();
 
-		cout << "Player total points : " << p.getTotalPoints() << endl;
-		cout << "Dealer total points : " << d.getTotalPoints() << endl;
-		
-		while (!playerStand)
-		{	
-			cout << "Hit(h) or stay(s): ";
-			cin >> playerChoice;
-			if (playerChoice == "s" || playerChoice == "stay" || playerChoice == "S")
-			{
-				playerStand = true;
-			}
-			else if (playerChoice == "h" || playerChoice == "Hit" || playerChoice == "H")
-			{
+		deck.drawNextCard(d.hand);
+		d.hand.flipSecondCard();
+		cout << "Drawing Second Card for Dealer => ";
+		d.hand.printLastCard();
 
-				deck.drawNextCard(p.hand);
-				cout << "New card is " << p.hand.cards.back().getValue() << endl;
-				cout << "Player Hands -> " ;
-				for (int i = 0 ; i < p.hand.cards.size() ; i++)
-				{
-					cout << p.hand.cards[i].getSuite() <<  p.hand.cards[i].getValue() << ",";
-				}
-				cout << " Total -> " << p.getTotalPoints();
-				cout << endl;
-				cout << "Player has ace -> " << p.hand.isAceIncluded << endl;
-				cout << "Dealer Hands -> ";
-				for (int i = 0 ; i < d.hand.cards.size() ; i++)
-				{
-					cout << d.hand.cards[i].getSuite() <<  d.hand.cards[i].getValue() << ",";
-				}
-				cout << " Total -> " << d.getTotalPoints();
-				cout << endl;
-				cout << "Dealer has ace -> " << d.hand.isAceIncluded << endl;
-				if (p.getTotalPoints() > 21)
-				{
-					cout << "You Lost!" << endl;
-					break;
-				}
-			}
-			else
-			{
-				cout << "Invalid choice, try again!" << endl;
-			}
-		}
+		cout << endl;
+		p.showHand();
+		d.showHand();
+		cout << endl;
 
-		// cout << "Deck after player stands" << endl;
-		// printDeck();
-
-		d.hand.flipFirstCard();
-		//cout << "Dealer total points after player stand : " << d.getTotalPoints() << endl;
 		int playerPoints = p.getTotalPoints();
+		d.hand.flipSecondCard();
 		int dealerPoints = d.getTotalPoints();
-		
 
-		if (playerPoints > 21)
+		if (p.hasBlackJack() && dealerPoints < 21)
 		{
-			cout << "Oh! Player Busted! Lost" << endl;
+			cout << "You have BlackJack ! You Win" << endl;
+			cout << endl;
+			p.showHand();
+			d.showHand();
+			cout << endl;
+			gameOver = true;
 		}
-		else // playerPoints <= 21
+		else if (d.hasBlackJack() && playerPoints < 21)
 		{
+			cout << "Dealer has BlackJack! Dealer Wins" << endl;
+			cout << endl;
+			p.showHand();
+			d.showHand();
+			cout << endl;
+			gameOver = true;
+		}
+		else if (p.hasBlackJack() && d.hasBlackJack())
+		{
+			cout << "Tie" << endl;
+			p.showHand();
+			d.showHand(); 
+			gameOver = true;
+		}
+		else
+		{
+			d.hand.flipSecondCard();
+
+			while (!playerStand)
+			{	
+				cout << "Hit(h) or stay(s): ";
+				cin >> playerChoice;
+				if (playerChoice == "s" || playerChoice == "stay" || playerChoice == "S")
+				{
+					playerStand = true;
+				}
+				else if (playerChoice == "h" || playerChoice == "Hit" || playerChoice == "H")
+				{
+					deck.drawNextCard(p.hand);
+					cout << "New card is ";
+					p.hand.printLastCard();
+					cout << endl;
+					p.showHand();
+					d.showHand();
+					cout << endl;
+					if (p.getTotalPoints() > 21)
+					{
+						cout << "Oh! You Busted! Lost" << endl;
+						gameOver = true;
+						break;
+					}
+				}
+				else
+				{
+					cout << "Invalid choice, try again!" << endl;
+				}
+			}
+		}
+
+		if (!gameOver)
+		{
+			d.hand.flipSecondCard();
+
+			cout << endl;
+			p.showHand();
+			d.showHand();
+			cout << endl;
+
+			playerPoints = p.getTotalPoints();
+			dealerPoints = d.getTotalPoints();
+			
 			while (dealerPoints <= 16 || (dealerPoints == 17 && d.hand.isAceIncluded))
 			{
 				cout << "Dealing card to Dealer ";
 				deck.drawNextCard(d.hand);
-				cout << "New card is " << d.hand.cards.back().getValue() << endl;
-				cout << "Player Hands -> " ;
-				for (int i = 0 ; i < p.hand.cards.size() ; i++)
-				{
-					cout << p.hand.cards[i].getSuite() <<  p.hand.cards[i].getValue() << ",";
-				}
+				cout << "New card is ";
+				d.hand.printLastCard();
+				cout << endl; 
+				p.showHand();
+				d.showHand();
 				cout << endl;
-				cout << "Player has ace -> " << p.hand.isAceIncluded << endl;
-				cout << "Dealer Hands -> ";
-				for (int i = 0 ; i < d.hand.cards.size() ; i++)
-				{
-					cout << d.hand.cards[i].getSuite() <<  d.hand.cards[i].getValue() << ",";
-				}
-				cout << endl;
-				cout << "Dealer has ace -> " << d.hand.isAceIncluded << endl;
 				dealerPoints = d.getTotalPoints();
 			}
 
@@ -298,8 +349,8 @@ void BlackJack::play()
 			}
 		}
 
-		cout << "Player P total points : " << playerPoints << endl;
-		cout << "Dealer D total points : " << dealerPoints << endl;
+		cout << "Player P total points : " << p.getTotalPoints() << endl;
+		cout << "Dealer D total points : " << d.getTotalPoints() << endl;
 
 		cout << "Quit(q) or Play(p)" << endl;
 		cin >> playerChoice;
@@ -311,6 +362,8 @@ void BlackJack::play()
 
 		playerStand = false;
 		noOfRounds++;
+
+		cout << "**************************************************************************************" << endl;
 	}
 	return;
 }

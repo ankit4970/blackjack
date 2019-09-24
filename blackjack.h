@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
+#include <unistd.h>
 using namespace std;
 
 class Card {
@@ -27,14 +27,14 @@ class Hand
 private:
     uint32_t totalPoints;
     
-    
 public:   
     bool isAceIncluded;
     vector<Card> cards;                // Move to 
     void addCard(Card card);           // Adds a card to Hand
     void clearHand();
-    void flipFirstCard();
+    void flipSecondCard();
     uint32_t getPoints();               // Returns total points of the Hand , Decision on ACE is 1 or 11
+    void printLastCard();
     Hand()
     {
         isAceIncluded = false;
@@ -50,9 +50,11 @@ public:
     Hand hand; // @TODO
     string name;
     int getTotalPoints();
-    Player(string name)
+    void showHand();
+    bool hasBlackJack();
+    Player(string playername)
     {
-        name.assign(name);
+        name = playername;
     }
     ~Player()
     {
@@ -73,7 +75,7 @@ private:
     vector<int> Points {1,2,3,4,5,6,7,8,9,10,10,10,10};
 public:
     void shuffle();                         // Shuffels the deck
-    void drawNextCard(Hand& hand);          // Deals the next card from the deck, if empty ?
+    bool drawNextCard(Hand& hand);          // Deals the next card from the deck, if empty ?
     bool isEmpty();
     void createDeck();
     void resetDeck();
